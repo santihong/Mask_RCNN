@@ -3,6 +3,9 @@ import os
 import sys
 import random
 import skimage.io
+import cv2 as cv
+import numpy as np
+import time
 
 # Root directory of the project
 ROOT_DIR = os.path.abspath("./")
@@ -65,14 +68,62 @@ class_names = ['BG', 'person', 'bicycle', 'car', 'motorcycle', 'airplane',
                'teddy bear', 'hair drier', 'toothbrush']
 
 
+def take_video():
+    cap = cv.VideoCapture(0)
+    # todo Set frame size not working
+    # cap.set(cv.CAP_PROP_FRAME_WIDTH, 320)
+    # cap.set(cv.CAP_PROP_FRAME_HEIGHT, 240)
+    cap.set(cv.CAP_PROP_FPS, 120)
+    print(cap.get(cv.CAP_PROP_FRAME_WIDTH), cap.get(cv.CAP_PROP_FRAME_HEIGHT))
+    if not cap.isOpened():
+        print('Error, camera cant open')
+        exit(-1)
+
+    wind_name = "video"
+    cv.namedWindow(wind_name)
+    time_last_frame = 0
+    while True:
+        start = time.time()
+        ret, frame = cap.read()
+
+        if not ret:
+            print('Capture frame failed')
+            exit(-1)
+
+        #image = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
+        image = frame
+
+        # Run detection
+        results = model.detect([image], verbose=1)
+
+        # Visualize results
+        r = results[0]
+        image = visualize.draw_instances(image, r['rois'], r['masks'], r['class_ids'],
+                                    class_names, r['scores'])
+
+        now = time.time()
+        time_elapsed = now - time_last_frame
+        time_last_frame = now
+        frame_rate = int(1 / time_elapsed)
+        cv.putText(image, 'FPS: %d' % frame_rate, (25, 100), cv.QT_FONT_NORMAL, 2, (255, 0, 0), thickness=2)
+        cv.imshow(wind_name, image)
+
+        if cv.waitKey(1) == ord('q'):
+            break
+
+    cap.release()
+    cv.destroyAllWindows()
+
+
+take_video()
 # Load a random image from the images folder
-file_names = next(os.walk(IMAGE_DIR))[2]
-image = skimage.io.imread(os.path.join(IMAGE_DIR, random.choice(file_names)))
-
-# Run detection
-results = model.detect([image], verbose=1)
-
-# Visualize results
-r = results[0]
-visualize.display_instances(image, r['rois'], r['masks'], r['class_ids'],
-                            class_names, r['scores'])
+# file_names = next(os.walk(IMAGE_DIR))[2]
+# image = skimage.io.imread(os.path.join(IMAGE_DIR, random.choice(file_names)))
+#
+# # Run detection
+# results = model.detect([image], verbose=1)
+#
+# # Visualize results
+# r = results[0]
+# visualize.display_instances(image, r['rois'], r['masks'], r['class_ids'],
+#                             class_names, r['scores'])
